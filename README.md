@@ -40,7 +40,7 @@
 - Lets you edit scene files
 - you can save/load scenes
 - scenes can be test ran
-- an app can be generated based scenes list
+- an app can be generated based on scenes list
 - visual-scripting plugin
   - full scripting support
 - app templates
@@ -140,6 +140,8 @@
 - Procedural Meshes
 
 - Particle Rendering systems
+
+- Billboard Quads & Meshes
 
 - Mesh Rendering
 
