@@ -30,7 +30,7 @@
   - Plugins are hosted publicly
   - Plugins follow a simple format and are enabled/disabled via a project's config.json
 
-- Lua Wrappers for module methods (expose functionality to Lua env)
+- Lua Wrappers for module methods (expose functionality to Lua environment)
 
 
 ### Native Editor App
@@ -56,7 +56,14 @@
 
 
 #### Assets (module)
-- Utilities for loading meshes, models, textures, audio, prefabs, etc..
+- Utilities for loading:
+  - meshes
+  - models
+  - textures
+  - audio
+  - prefabs
+  - scenes
+
 - Data types for managing assets
 - Blender Support
 
@@ -73,11 +80,11 @@
 - SceneManager
   - loads Scene's
   - manages scene init and clean up
-  - calls Scene's script file(s) (start, exit, etc..)
+  - calls Scene's script file(s)/action(s) (start, exit, etc..)
 
 - Scene
   - references script files
-  - dependent on a MemoryArena
+  - dependent on MemoryArena
   - can instantiate (T)object's
     - objects are copied into a MemoryArena
   - Has storage containers for Entity, Component, and Resource 
@@ -93,7 +100,7 @@
 
 #### Memory (module)
 - MemoryArena
-  - a wrapper for an allocated block of x bytes
+  - a wrapper for an allocated block of N bytes
 
 - ArenaManager
   - a management class for MemoryArena's
@@ -103,11 +110,14 @@
 
 #### Network (module)
 - Global Stat CRUD
-  - leaderboards, etc..
+  - backend for api's like leaderboards, etc..
 
 - Rooms
   - clients join rooms
-  - rooms allow communication to all room members
+    - members can communicate in and interact with the Room
+  - rooms have rules which are initialized by the host
+    - room rules are propagated to clients
+    - the rules are the shared agreement for the players to stay in sync
 
 - Worlds
   - worlds are actual running instances of a scene/timeline
@@ -118,10 +128,15 @@
   - owned by the server
   - data changes will be propagated to clients
   - can only be set by auth
-  - clients can request to set the data
+    - clients can request to set the data
 
 #### Physics (module)
-- Global Forces (wind, objects, etc..)
+- Global Forces (wind, water, gravity, drag, etc..)
+
+- Collision/Trigger Callbacks
+  - Entities can assign a callback or callback group
+    - a callback is function signature
+    - a callback group is a group of entities that share a single callback
 
 - Box Sweep, Raycast
 
@@ -132,7 +147,7 @@
 - Default System
   - filters through a Scene's entities for ones with physical characteristics
   - solves collision and physics forces
-  - attempts to call callback for collided entities
+    - attempts to invoke callback's for collided entities
 
 #### Rendering (module)
 - Screen Effects
@@ -152,13 +167,13 @@
 - Imposter rendering
   - renders a single object from multiple angles and projects it onto several quads
   - one shared object for many instances
-  - a piece of geometry can be loaded a single time and be reused
+    - the piece of geometry can be loaded a single time and be reused
 
 - Animation Systems
 
 - Default System
   - filters through a Scene's entities for renderable ones
-  - calls the most appropriate/suited draw method 
+  - calls the most appropriate/suited Draw method 
 
 #### Scripting (module)
 - Lua helpers
@@ -173,7 +188,7 @@
 
 #### Threading (module)
 - Task management for parallel system execution
-  - split homogenous system functions into batch calls
+  - split homogenous system functions invokes into batch calls
 
 #### Window (module)
 - Helpers for window open/close
@@ -186,8 +201,8 @@
 
 
 ### Plugins
-- editor app
-  - scene editor
+- simple-stats
+  - leaderboard api
 
 - game-maker tools
   - asset tools for creating mini-games
