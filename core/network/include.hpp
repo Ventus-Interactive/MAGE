@@ -1,6 +1,6 @@
 
-#ifndef MOD_NETWORKING
-#define MOD_NETWORKING
+#ifndef MOD_NETWORK
+#define MOD_NETWORK
 
 extern "C" {
     #include "lib.h"
@@ -8,4 +8,4 @@ extern "C" {
 
 //
 
-#endif // !MOD_NETWORKING
+#endif // !MOD_NETWORK

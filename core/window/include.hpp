@@ -1,6 +1,6 @@
 
-#ifndef MOD_NAME
-#define MOD_NAME
+#ifndef MOD_WINDOW
+#define MOD_WINDOW
 
 extern "C" {
     #include "lib.h"
@@ -25,4 +25,4 @@ private:
 }
 
 
-#endif // !MOD_NAME
+#endif // !MOD_WINDOW

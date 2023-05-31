@@ -1,6 +1,6 @@
 
-#ifndef MOD_NAME
-#define MOD_NAME
+#ifndef MOD_SCRIPTING
+#define MOD_SCRIPTING
 
 extern "C" {
     #include "lib.h"
@@ -8,4 +8,4 @@ extern "C" {
 
 //
 
-#endif // !MOD_NAME
+#endif // !MOD_SCRIPTING

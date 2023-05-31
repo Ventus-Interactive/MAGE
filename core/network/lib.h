@@ -1,8 +1,8 @@
 
-#ifndef LIB_NETWORKING
-#define LIB_NETWORKING
+#ifndef LIB_NETWORK
+#define LIB_NETWORK
 
-void mod_networking_init();
-void Test_mod_networking_init();
+void mod_network_init();
+void Test_mod_network_init();
 
-#endif // !LIB_NETWORKING
+#endif // !LIB_NETWORK
