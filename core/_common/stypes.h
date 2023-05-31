@@ -13,10 +13,6 @@ DT(byte_arr, byte*)
 
 DT(f32, float)
 
-DS(Float2,
-    f32 x; f32 y;
-)
-
 DS(size_pair,
     u32 size_k; 
     u32 size_v;
