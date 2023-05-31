@@ -6,7 +6,7 @@
 void mod_memory_init();
 void Test_mod_memory_init();
 
-#include <.common/stypes.h>
+#include <_common/stypes.h>
 
 
 #define BACKEND_ARENA_MAX_ENTRY_SIZE 16000

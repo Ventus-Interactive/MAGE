@@ -66,3 +66,10 @@ void Test_mod_memory_init() {
     PrintD("Test::memory_init")
 }
 
+namespace MAGE {
+namespace Memory {
+
+
+
+}
+}

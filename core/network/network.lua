@@ -1,9 +1,9 @@
 
-local networking = { status = 0 }
+local network = { status = 0 }
 
-function networking.init()
-    print("- Lua::Networking::Init")
-    networking.status = 1
+function network.init()
+    print("- Lua::Network::Init")
+    network.status = 1
 end
 
-return networking
+return network
