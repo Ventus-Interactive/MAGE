@@ -3,51 +3,36 @@
 ## Modular Accessible Game Engine
 
 
-# First Class Linux/Ubuntu & RPi4 Support
+
+# Made for Linux/Ubuntu & RaspberryPi-4
 - Developed using Linux, for Linux users.
 - (currently only Linux support. may not function as intended when using Windows/WSL or MacOS)
-- Low-cost systems allow distribution on RPi3/4, possibly other similar devices as well
+- Low-cost systems allow distribution on RaspberryPi 3 & 4, possibly other similar devices as well
 
 ## Write 2D/3D Games and Simulations with Native C++ and/or Lua
 - Powered by Raylib
   - raylib has no external dependencies, this project only depends on raylib.
-  - minimal total wrapping over raylib methods
+  - minimal total wrapping over any raylib methods
 
 - Lightweight, Fast, and Safe
-  - Written in 'Golden C++' (primarily idiomatic C, minimal usage of Standard Library & Template Library)
+  - Written in 'Golden C++' (minimal usage of Standard & Template Libraries, and newer language features)
   - Carefully designed to minimize bloat
-  - Much of the low-level code would be considered Pure C
-  - Almost every door to the heap is managed through MemoryArena's (via ArenaManager's)
+  - Core code aims to be considered 'Pure C'
+  - Most allocated memory is managed through MemoryArena's (via ArenaManager's)
 
 - Modular Design
   - Modular design is good for contributors :)
-  - The Codebase is split into modules and sub-modules
-  - Modules can be referenced by a project, via a config.json
-  - Sub-modules are for organization (you can not select individual sub-modules to use)
+  - The Codebase is split into modules and sub-modules for organization
 
-- User-Created-Plugin support
-  - the developers of this, as well as any public user, can create plugins
-  - Plugins are hosted publicly
-  - Plugins follow a simple format and are enabled/disabled via a project's config.json
-
-- Lua Wrappers for module methods (expose functionality to Lua environment)
-
-
-### Native Editor App
-- packaged as a distributable, hosted on something like itch.io
-- Downloads the editor app (with engine code)
-- Builds the engine components natively
-- Lets you edit scene files
-- you can save/load scenes
-- scenes can be test ran
-- an app can be generated based on scenes list
-- visual-scripting plugin
-  - full scripting support
-- app templates
+- Lua Scripting 
+  - Simple Module APIs
+    - enable functionality from a module for a Lua environment
+  - Faster interation
+    - Lua scripts can be rewritten to change the behavior of an app without recompiling it 
 
 
 
-#### Common (not a module, always included)
+#### Common (not a module)
 - Types 'Primitive'
 - Types 'Advanced'
 - Helper Define's
@@ -111,6 +96,10 @@
 #### Network (module)
 - Global Stat CRUD
   - backend for api's like leaderboards, etc..
+
+- Cloud Saves
+
+- OTA(over-the-air) Game Reloading
 
 - Rooms
   - clients join rooms
@@ -194,17 +183,5 @@
 - Helpers for window open/close
 
 - Utilities for screen related calculations
-
-
-
-
-
-
-### Plugins
-- simple-stats
-  - leaderboard api
-
-- game-maker tools
-  - asset tools for creating mini-games
 
 
