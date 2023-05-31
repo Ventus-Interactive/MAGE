@@ -10,12 +10,12 @@
 #define RUN(cmd) system((cmd));
 
 
-#define PATH_BIN "./.bin"
-#define PATH_MODS "./core"
+#define PATH_BIN "../_bin"
+#define PATH_MODS "../core"
 #define CC " g++ "
 #define STNDRD " -std=c++17 "
 #define COMPILE " -c "
-#define INCLUDES " -I. -I./core "
+#define INCLUDES " -I. -I../core "
 #define LIBS " -lraylib -llua -lm -ldl "
 
 

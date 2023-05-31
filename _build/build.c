@@ -13,6 +13,7 @@ int main(void) {
     BUILD_MOD("input")
     BUILD_MOD("memory")
     BUILD_MOD("network")
+    BUILD_MOD("physics")
     BUILD_MOD("rendering")
     BUILD_MOD("scripting")
     BUILD_MOD("threading")
