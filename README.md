@@ -33,15 +33,30 @@
 
 
 #### Common (not a module)
-- Types 'Primitive'
-- Types 'Advanced'
-- Helper Define's
-- Debug Util
-- Misc Util
+- types
+    - i32, u32
+    - f32, f64
+    - l64
+    - byte_arr_t
+    - size_pair_t
+
+- defines
+    - app_main
+      - for quickly starting a project
+    - library helpers
+      - LibFn
+        - used to call C methods
+
+- logging
+    - logging can be disabled
+    - log to console
+    - log to file (append)
 
 
 #### Assets (module)
-- Utilities for loading:
+###### Lua Wrappers for raylib 
+- Blender Support
+- wrapper loading methods
   - meshes
   - models
   - textures
@@ -49,51 +64,163 @@
   - prefabs
   - scenes
 
-- Data types for managing assets
-- Blender Support
 
 #### Audio (module)
-- Sound Mixing
-- Clips  (one-off's)
-- Tracks (songs, long-form)
-- Effects
+###### Customizable Audio Players
+
+- SoundPlayer class
+  - maps for sound resources 
+
+  - has mixer settings
+    - AudioSettings 
+
+  - register sound method
+      - load <asset_name, sound>
+
+  - play sound method
+    - play sound_name
+
+
+- MusicPlayer class
+  - maps for music resources
+
+  - register audio_data method
+    - load <asset_name, music> 
+
+  - play_track method
+    - calls play method on each enabled layer in track_name's Layer's
+
+  - stop_track method
+    - calls stop method on each enabled layer in track_name's Layer's
+
+  - toggle_track method
+    - toggle track_name
+
+  - toggle_track_layer method
+    - toggle track_name's layer_name
+
+  - register track method
+    - emplace <track_name, track_data>
+
+  - register track_layer method
+    - call track_name's register method
+
+  - register track_layer_audio method
+    - call track_name's layer_name's register music method
+
+  - Track
+    - can be toggled
+    - has global settings like Volume, Pitch, Pan
+      - AudioSettings
+    - has a map of Layer's
+    - register Layer method
+    - LoadLayer(mix_layer, music)
+    - ToggleLayer(mix_layer)
+
+  - Layer
+    - can be toggled
+    - has all settings
+      - AudioSettings
+
+    - has list of keys to musics
+      - method for registering either  music
+
+    - play method
+      - starts playing each music
+
+    - stop method
+      - stops playing each music
+
 
 #### ECS (module)
-- IEntity
-  - interface for ECS
+###### Entities, Components, Systems, and Resources
+ - IEntity ( ITogglable, IUpdatable )
+    - HasComponent(name)
+    - GetComponent(name)
+    - GetArenaSpan()
+      - sp <--> sp+size
+- World ( IDestroyable, ITogglable, IUpdatable )
+  - ArenaManager for Component's 
+    - GetComponentSP()
 
-- SceneManager
-  - loads Scene's
-  - manages scene init and clean up
-  - calls Scene's script file(s)/action(s) (start, exit, etc..)
-
-- Scene
-  - references script files
-  - dependent on MemoryArena
-  - can instantiate (T)object's
-    - objects are copied into a MemoryArena
-  - Has storage containers for Entity, Component, and Resource 
+  - unordered_map's for <name, IEntity>, <name, IResource>
+    - AddEntity(name, data)
+    - GetEntity(name)
+    - RemoveEntity(name)
+    - AddResource(name, data)
+    - GetResource(name)
+  
+  - Destroy
+    - clean components, resources
+  
+  - ApplySystem(sys)
+    - run a custom system with entities*, resources* param
 
 #### Events (module)
-- Good ol fashioned Event System
+###### Queue/Listener(s) Event System
+  - event queue
+  - register listeners to be invoked when <event> happens
+    - pipe the data through the listener
+  - trigger events from methods (with args)
 
 #### GUI (module)
-- UI Widget toolkit
+###### UI Widget Toolkit
+  - grid
+  - panel
+  - image
+  - button
+  - slider
+  - toggle
+  - text
+  - input text
+
 
 #### Input (module)
-- Helpers and Data-types for handling Keyboard/Mouse, Gamepads, and Touch Devices
+###### Keyboard/Mouse, Gamepads, and Touch Devices
+- struct input_map_data {input_methods_mask, callback_list}
+- typedef <key, input_map_data> input_settings
+- manager class ( ITogglable, IUpdatable )
+  - contains an input_settings
+    - can append input_map_data's
+  - polls input maps
+    - invoke map's activated callback
+
 
 #### Memory (module)
-- MemoryArena
-  - a wrapper for an allocated block of N bytes
-
-- ArenaManager
-  - a management class for MemoryArena's
-
-- ArenaVar
-  - a wrapper for (T*)data, located inside a MemoryArena
+###### Safe Resource Management
+- cArena ( C )
+  - contains a pointer for N bytes
+  - uses a stack pointer for variable allocation
+  - tracks its capacity
+  - can be cleared for reuse
+- ArenaVar<T> ( C++ )
+  - wrapper for data located inside a cArena
+  - Get()     gives you a data pointer
+  - Unwrap()  gives you a data copy
+- arena backend methods
+  - new
+  - dispose
+  - print
+  - push
+  - clear
+- ArenaManager ( C++ ) ( IDestroyable )
+  - container CRUD
+    - object clear method
+      - store a memory region from sp_begin to sp_end  ( loc, loc+size )
+    - dynamic create method
+      - check memory regions
+        - if the new object is too big, do a normal arena push
+        - if the object fits, resize the region to start after this new object
+  - wraps a cArena
+  - wrapper OOP methods
+    - new
+    - dispose
+    - print
+    - push
+    - clear
 
 #### Network (module)
+###### Starter Framework
 - Global Stat CRUD
   - backend for api's like leaderboards, etc..
 
@@ -119,7 +246,9 @@
   - can only be set by auth
     - clients can request to set the data
 
+
 #### Physics (module)
+###### Rigidbodies, Forces, Raycasting, and AABB Collision Systems
 - Global Forces (wind, water, gravity, drag, etc..)
 
 - Collision/Trigger Callbacks
@@ -133,12 +262,17 @@
 
 - 2D/3D Particle physics
 
-- Default System
-  - filters through a Scene's entities for ones with physical characteristics
+
+- Default Physics/Collision Systems
   - solves collision and physics forces
-    - attempts to invoke callback's for collided entities
+  - Filters through a World to find entities with physical characteristics
+  - AABB Spacial Partitioning
+  - Attempts to invoke callbacks when entities collide
+  - Physics is calculated on Rigidbody/Collider Entities
+
 
 #### Rendering (module)
+###### Dynamic Pipeline Renderer, Models, Animations, Billboards, Sprites, Particles
 - Screen Effects
 
 - Procedural Meshes
@@ -147,41 +281,58 @@
 
 - Billboard Quads & Meshes
 
-- Mesh Rendering
-
-- Shader & Material Tables
-
-- Model Rendering (.obj, ..?)
+- Animation Systems
 
 - Imposter rendering
   - renders a single object from multiple angles and projects it onto several quads
   - one shared object for many instances
     - the piece of geometry can be loaded a single time and be reused
 
-- Animation Systems
+- cSpriteData            
+- cMeshData
+- cModelData
+- cAnimatorData
+- SpriteRenderer ( IDestroyable, ITogglable, IUpdatable )
+- MeshRenderer   ( IDestroyable, ITogglable, IUpdatable )
+- ModelRenderer  ( IDestroyable, ITogglable, IUpdatable )
+- Animator       ( IDestroyable, ITogglable, IUpdatable )
 
-- Default System
-  - filters through a Scene's entities for renderable ones
-  - calls the most appropriate/suited Draw method 
+- Shader & Material Tables
+- Assignable Materials/Shaders
+
+- Default System:
+    - Objects are filtered out of a World
+        - the objects are rendered correctly based on attributes
+
+
+
 
 #### Scripting (module)
-- Lua helpers
-  - Util for Lua Bindings
-
-- Script Loading/Execution
-
+###### Make your games Moddable
 - Scripting API
   - should mirror native scripting as much as possible
+  - IScriptBehavior
+    - virtual methods:
+      - init      ( IDestroyable )
+      - on-enable  ( ITogglable )
+      - on-update (  IUpdatable  )
+      - on-disable ( ITogglable )
+      - destroy   ( IDestroyable )
+  - class to wrap LuaState ( IDestroyable )
+    - init, get, close
+  - class for each module that exposes to LuaEnv
+    - loads module's script into LuaState
+    - will string_call or method_invoke load/init and clean_up/close
 
-- Util types
 
 #### Threading (module)
-- Task management for parallel system execution
-  - split homogenous system functions invokes into batch calls
+###### Task management for parallel system execution
+- may split homogenous system functions invokes into batch calls
+
 
 #### Window (module)
-- Helpers for window open/close
-
+###### Screen/Window Helpers & Lua Wrappers
 - Utilities for screen related calculations
+- Lua wrappers for Screen/Window related methods
 
 
