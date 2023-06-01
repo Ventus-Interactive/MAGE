@@ -32,7 +32,7 @@ l64 LibFn(arena_push)(cArena* arena, l64 size, void* data) {
         return BACKEND_FAIL_ARENA_NOSPACE;
     }
 
-    byte_arr ba = arena->arr;
+    byte_arr_t ba = arena->arr;
     l64 i;
     for (i = 0; i < size; i++) {
         ba[arena->sp++] = ((byte*)data)[i];

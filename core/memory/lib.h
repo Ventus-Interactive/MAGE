@@ -18,7 +18,7 @@ void Test_mod_memory_init();
 DS(cArena,
     l64 capacity;
     l64 sp;
-    byte_arr arr;
+    byte_arr_t arr;
 )
 
 DS(cLinkedArena,

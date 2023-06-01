@@ -11,15 +11,7 @@ extern "C" {
 namespace MAGE {
 namespace Window {
 
-class Application {
-public:
-    void Init(const char* name, int width, int height);
-    static void OnExit();
-    Camera* GetCamera() { return &this->camera; }
-
-private:
-    Camera camera;
-};
+/// just load module-wrappers to Lua
 
 }
 }
