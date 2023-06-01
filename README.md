@@ -6,7 +6,7 @@
 
 # Made for Linux/Ubuntu & RaspberryPi-4
 - Developed using Linux, for Linux users.
-- (currently only Linux support. may not function as intended when using Windows/WSL or MacOS)
+  - (currently only Linux support. may not function as intended when using Windows/WSL or MacOS)
 - Low-cost systems allow distribution on RaspberryPi 3 & 4, possibly other similar devices as well
 
 ## Write 2D/3D Games and Simulations with Native C++ and/or Lua
