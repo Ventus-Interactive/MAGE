@@ -3,7 +3,7 @@ if __name__ == "__main__":
 
     from subprocess import run as subproc
 
-    dirpath = ".."
+    dirpath = "../MAGE"
 
     
     SRC=f"{dirpath}/_build"

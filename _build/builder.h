@@ -10,12 +10,12 @@
 #define RUN(cmd) system((cmd));
 
 
-#define PATH_BIN "../_bin"
-#define PATH_MODS "../core"
+#define PATH_BIN "../MAGE/_bin"
+#define PATH_MODS "../MAGE/core"
 #define CC " g++ "
 #define STNDRD " -std=c++17 "
 #define COMPILE " -c "
-#define INCLUDES " -pthread -I../core -I../core/_common   -I. -I../core "
+#define INCLUDES " -pthread -I../MAGE/core -I../MAGE/core/_common   -I. -I../MAGE/core "
 #define LIBS " -lraylib -llua -lm -ldl -lpthread -lwinmm "
 
 /// windows
