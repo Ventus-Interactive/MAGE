@@ -47,7 +47,8 @@ void EventManager::Update() {
     std::vector<IEventListener*>* listeners;
 
     while (this->events.empty() == false) {
-        event = this->events.front(); this->events.pop();
+        event = this->events.front(); 
+        this->events.pop();
         if (this->listener_table.find(event.name) == this->listener_table.end()) 
             continue;
 
