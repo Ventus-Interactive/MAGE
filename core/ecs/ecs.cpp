@@ -2,6 +2,14 @@
 #include <_common/sdebug.h>
 #include "include.hpp"
 
+#include <vector>
+#include <cstring>
+#include <string>
+
+float lerp(float a, float b, float t) {
+    return a + (b - a) * t;
+} 
+
 void mod_ecs_init() {
     PrintD("Mod::ecs_init")
 }
@@ -14,34 +22,224 @@ void Test_mod_ecs_init() {
 namespace MAGE {
 namespace ECS {
 
-void Scene::Init(int bytes) {
-    this->arena = LibFn(new_arena)(bytes);
-}
-void Scene::Destroy() {
-    LibFn(arena_dispose)(&this->arena);
+World* World::current;
+
+void LoadModule(lua_State* L) {
+    lua_register(L, "h_core_ecs_world_add_resource", World::lua_AddResource);
+    lua_register(L, "h_core_ecs_world_add_entity"  , World::lua_AddEntity  );
+
+    luaL_dofile(L, "resources/scripts/core/ecs.lua");
+    lua_setglobal(L, "ecs");  // expose reference
+    lua_settop(L, 0);   // clear the stack
 }
 
-void SceneManager::Start() {
-    if (this->scenes.find("main_menu") != this->scenes.end())
-        this->scenes["main_menu"]->Play(this);
-    else
-        printf("-  Fatal:: Failed to Start Scene Player, No Entry 'main_menu'\n");
-}
+//void Scene::Init(int bytes) {
+ //   this->arena = LibFn(new_arena)(bytes);
+//}
+//void Scene::Destroy() {
+ //   LibFn(arena_dispose)(&this->arena);
+//}
 
-void SceneManager::Play(std::string name) {
-    if (this->scenes.find(name) != this->scenes.end())
-        this->scenes[name]->Play(this);
-    else
-        printf("- Fatal:: SceneManager could not Play Scene<%s>(Unavailable)\n", name.c_str());
-}
+//Memory::ArenaManager* World::PushManager(int capacity) {
+//    this->blocks.emplace_back(Memory::ArenaManager(capacity));
+ //   return &this->blocks[this->blocks.size()-1];
+//}
 
-void SceneManager::Destroy() {
-    for (auto& scene : this->scenes) {
-        scene.second->Destroy();
-        free(scene.second);
+bool World::TryFactoryInstantiateResource(std::string resource_name, std::string resource_type, std::string resource_meta) {
+    for (auto factory : this->resourceFactories) {
+        if (factory->CanInstantiate(resource_type)) {
+            return this->AddResource(resource_name, factory->Instantiate(this, resource_type, resource_meta)->As<IResource>());
+        }
     }
+    return false;
 }
 
+bool World::TryFactoryInstantiateEntity(std::string entity_name, std::string entity_type, std::string entity_meta) {
+    for (auto factory : this->entityFactories) {
+        if (factory->CanInstantiate(entity_type)) {
+            return this->AddEntity(entity_name, factory->Instantiate(this, entity_type, entity_meta)->As<IEntity>());
+        }
+    }
+    return false;
 }
+
+
+void World::Destroy() {
+    if (!this->entities.empty()) 
+    for (auto iter = this->entities.begin(); iter != this->entities.end(); ++iter) {
+        //iter->second->Destroy();
+        free(iter->second);
+    }
+    if (!this->resources.empty()) 
+    for (auto iter = this->resources.begin(); iter != this->resources.end(); ++iter) {
+        iter->second->Destroy();
+        free(iter->second);
+    }
+
+    for (int i = 0; i < this->entityFactories.size(); i++) {
+        free(this->entityFactories[i]);
+
+    }
+    for (int i = 0; i < this->resourceFactories.size(); i++) {
+        free(this->resourceFactories[i]);
+    }
+
+    this->am_components.Destroy();
 }
+
+l64 World::GetComponentSP() {
+    return this->am_components.GetArena()->sp;
+}
+
+//bool World::AddEntity(std::string name, T* entity) {
+//    this->entities.emplace(name, (IEntity*)entity);
+//    return this->entities.find(name) != this->entities.end();
+//}
+
+int World::lua_AddEntity(lua_State* L) {
+    PrintD("- World::lua_AddEntity")
+    
+    
+    // "default:potty:static_model:pot3D"
+    const char* cparams = lua_tostring(L, 1);
+    std::string params = cparams;
+    printf("    - params: %s, %ld\n", params.c_str(), params.length());
+
+
+    const int bufsize = 64;
+    char buf[bufsize];
+    memset(buf, 0, bufsize);
+    std::vector<std::string> split_params;
+    int c = 0, i, len = params.length();
+    for (i = 0; i < len; i++) {
+        if (cparams[i] == ':') {
+            std::string s = buf;
+            split_params.emplace_back(s);
+            c = 0;
+            memset(buf, 0, bufsize);
+            continue;
+        }
+
+        buf[c++] = cparams[i];
+
+        if (i+1 == len) {
+            std::string s = buf;
+            split_params.emplace_back(s);
+            break;
+        }
+    }
+    
+    if (split_params.size() == 4) {
+        std::string world_name  = split_params[0];
+        std::string entity_name = split_params[1];
+        std::string entity_type = split_params[2];
+        std::string entity_meta = split_params[3];
+        printf("    - world: %s, entity: %s, type: %s, meta: %s\n", world_name.c_str(), entity_name.c_str(), entity_type.c_str(), entity_meta.c_str());
+    
+        World* world = 0;
+        // use world_name to get world reference
+        if (world_name == "default") {
+            world = World::current;
+        }
+
+        if (world == 0) {
+            printf("    - Failed to select a World!\n");
+            return 0;
+        }
+
+        // give entity_type to the factory chain, to create instance of type, using entity_meta
+        // create entity with name and new instance
+        if (!world->TryFactoryInstantiateEntity(entity_name, entity_type, entity_meta)) {
+            printf("    - Failed TryFactoryInstantiateEntity\n");
+        }
+    }
+
+
+    return 0;
+}
+bool World::RemoveEntity(std::string name) {
+    this->entities.erase(name);
+    return this->entities.find(name) == this->entities.end();
+}
+IEntity* World::GetEntity(std::string name) {
+    return this->entities[name];
+}
+IEntity* World::GetEntity(l64 index) {
+    auto a = this->entities.begin();
+    for (int i = 0; i < index; i++) {
+        ++a;
+    }
+    return a->second;
+}
+
+bool World::AddResource(std::string name, IResource* resource) {
+    this->resources.emplace(name, resource);
+    return this->resources.find(name) != this->resources.end();
+}
+int World::lua_AddResource(lua_State* L) {
+    PrintD("- World::lua_AddResource")
+
+    // "default:pot3D:model:pot3D.obj"
+    
+    const char* cparams = lua_tostring(L, 1);
+    std::string params = cparams;
+    printf("    - params: %s, %ld\n", params.c_str(), params.length());
+
+
+    const int bufsize = 64;
+    char buf[bufsize];
+    memset(buf, 0, bufsize);
+    std::vector<std::string> split_params;
+    int c = 0, i, len = params.length();
+    for (i = 0; i < len; i++) {
+        if (cparams[i] == ':') {
+            std::string s = buf;
+            split_params.emplace_back(s);
+            c = 0;
+            memset(buf, 0, bufsize);
+            continue;
+        }
+
+        buf[c++] = cparams[i];
+
+        if (i+1 == len) {
+            std::string s = buf;
+            split_params.emplace_back(s);
+            break;
+        }
+    }
+    
+    if (split_params.size() == 4) {
+        std::string world_name    = split_params[0];
+        std::string resource_name = split_params[1];
+        std::string resource_type = split_params[2];
+        std::string resource_meta = split_params[3];
+        printf("    - world: %s, resource: %s, type: %s, meta: %s\n", 
+            world_name.c_str(), resource_name.c_str(), resource_type.c_str(), resource_meta.c_str());
+    
+        World* world = 0;
+        // use world_name to get world reference
+        if (world_name == "default") {
+            world = World::current;
+        }
+
+        if (world == 0) {
+            printf("    - Failed to select a World!\n");
+            return 0;
+        }
+
+        // give resource_type to the factory chain, to create instance of type, using resource_meta
+        // create resource with name and new instance
+        if (!world->TryFactoryInstantiateResource(resource_name, resource_type, resource_meta)) {
+            printf("    - Failed TryFactoryInstantiateResource\n");
+        }
+    }
+
+    return 0;
+}
+IResource* World::GetResource(std::string name) {
+    return this->resources[name];
+}
+
+}}
 

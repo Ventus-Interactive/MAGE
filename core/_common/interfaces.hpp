@@ -6,9 +6,31 @@
 #include <string>
 
 
+class IPrintable {
+public:
+    virtual const char* ToString() = 0;
+};
+
+class ICastable/*Pointer*/ {
+public:
+    template <class T>
+    T* As() { return (T*)this; }
+};
+
+class IDestroyable {
+public:
+    virtual void Init()    {}
+    virtual void Destroy() {}
+};
+
+class IResource : public ICastable, public IDestroyable {
+public:
+    //void Destroy() {}
+};
+
 class ITogglable {
 public:
-    virtual void Toggle(bool state) {}
+    virtual void ToggleState() {}
     virtual void OnEnable()  {}
     virtual void OnDisable() {}
 };
@@ -24,5 +46,7 @@ public:
     virtual std::string Serialize() { return ""; }
     virtual void Deserialize(T data_copy) {}
 };
+
+
 
 #endif // !COMMON_INTERFACES_HPP

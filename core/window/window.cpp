@@ -13,7 +13,7 @@ void Test_mod_window_init() {
 namespace MAGE {
 namespace Window {
 
-    void Application::Init(const char* name, int width, int height) {
+    /*void Application::Init(const char* name, int width, int height) {
         PrintD("Window::Application::Init()")
 
         InitWindow(width, height, name);
@@ -29,7 +29,7 @@ namespace Window {
     }
     void Application::OnExit() {
         CloseWindow();
-    }
+    }*/
 
 }}
 

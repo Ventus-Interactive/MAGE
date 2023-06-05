@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #define PrintD(msg) printf("- #%d :: %s\n", __LINE__, msg);
+#define PrintF(msg, v...) printf("- #%d :: %s\n", __LINE__, msg, v);
 
 
 #ifdef FLAG_TESTMODE

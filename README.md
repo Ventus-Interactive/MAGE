@@ -158,32 +158,33 @@
 
 #### Events (module)
 ###### Queue/Listener(s) Event System
-  - event queue
-  - register listeners to be invoked when <event> happens
-    - pipe the data through the listener
-  - trigger events from methods (with args)
+  - event manager
+    - event queue
+    - register listener methods to be invoked when <event> happens
+      - pipe the data through the listener's method
+    - trigger events from methods (with args)
 
 #### GUI (module)
 ###### UI Widget Toolkit
-  - grid
-  - panel
-  - image
+  - grid (widget)
+  - panel (image)
   - button
   - slider
   - toggle
   - text
-  - input text
+  - text_input
 
 
 #### Input (module)
 ###### Keyboard/Mouse, Gamepads, and Touch Devices
-- struct input_map_data {input_methods_mask, callback_list}
-- typedef <key, input_map_data> input_settings
+- struct ActionMapData {input_methods_mask, callback_list}
+- typedef <int, ActionMapData> input_settings
 - manager class ( ITogglable, IUpdatable )
   - contains an input_settings
-    - can append input_map_data's
-  - polls input maps
-    - invoke map's activated callback
+  - can register ActionMapData's
+  - can append action to an ActionMapData[key].actions
+  - overrides IUpdatable::Update to poll input maps
+    - invoke map's active callbacks, passing allowed_states[i], for each allowed state
 
 
 #### Memory (module)
@@ -193,16 +194,20 @@
   - uses a stack pointer for variable allocation
   - tracks its capacity
   - can be cleared for reuse
+
 - ArenaVar<T> ( C++ )
   - wrapper for data located inside a cArena
   - Get()     gives you a data pointer
+  - Set(addr) set new real address
   - Unwrap()  gives you a data copy
+
 - arena backend methods
   - new
   - dispose
   - print
   - push
   - clear
+
 - ArenaManager ( C++ ) ( IDestroyable )
   - container CRUD
     - object clear method

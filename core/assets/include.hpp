@@ -11,7 +11,18 @@ extern "C" {
 namespace MAGE {
 namespace Assets {
 
-/// just load module-wrappers to Lua
+/// load module-wrappers to Lua
+
+/* ###### Lua Wrappers for raylib 
+- Blender Support
+- wrapper loading methods
+  - meshes
+  - models
+  - textures
+  - audio
+  - prefabs
+  - scenes
+*/
 
 }
 }

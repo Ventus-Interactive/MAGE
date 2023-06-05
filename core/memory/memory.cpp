@@ -69,7 +69,23 @@ void Test_mod_memory_init() {
 namespace MAGE {
 namespace Memory {
 
+    ArenaManager::ArenaManager() {}
+    ArenaManager::ArenaManager(l64 arena_capacity) {
+        printf("- creating ArenaManager\n");
+        this->arena = LibFn(new_arena)(arena_capacity);
+    }
+    void ArenaManager::Clear() {
+        /// todo: custom clear
+        ///     store a memory region from sp_begin to sp_end  ( loc, loc+size )
+        LibFn(arena_clear)(&this->arena);
+    }
+    void ArenaManager::Destroy() {
+        printf("- destroying ArenaManager\n");
+        LibFn(arena_dispose)(&this->arena);
+    }
 
+    cArena* ArenaManager::GetArena() {
+        return &this->arena;
+    }
 
-}
-}
+}}
