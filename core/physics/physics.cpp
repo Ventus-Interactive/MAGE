@@ -34,7 +34,8 @@ void RegisterEvents(Events::EventManager* eventManager) {
 
 
 void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>* data){//}, ECS::World* world) {
-   
+    float timedelta = GetFrameTime();
+
     ECS::Transform*       transformA;    ECS::Transform*       transformB;
     Physics::BoxCollider* boxColliderA;  Physics::BoxCollider* boxColliderB;
     Physics::Rigidbody*   rigidbodyA;    Physics::Rigidbody*   rigidbodyB;
@@ -42,21 +43,28 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
     Vector3* positionA; Vector3* positionB;
     Vector3* scaleA;    Vector3* scaleB;
 
-    BoundingBox boxA, boxB;
+    BoundingBox boxA, boxB, box_pred;
     float hwidthA, hheightA, hdepthA;
     float hwidthB, hheightB, hdepthB;
     float acenterx, acentery, acenterz;
     float bcenterx, bcentery, bcenterz;
 
     const float global_physics_gravity          = -9.2f;
-    const float global_physics_movement_rate    = 0.0131f;
-    const float global_physics_dampen_rate      = 0.8f;
-    const float global_collision_dampen_rate    = 0.8f;
-    const float global_collision_pushback_force = 0.013f;
+    const float global_physics_movement_rate    = 1.0f;
+    const float global_physics_dampen_rate      = 0.0085f;
+    //const float global_physics_sweep_dampen_rate= 1.0f;
+    //const float global_collision_dampen_rate    = 1.0f;
+    const float global_collision_pushback_force = 1.0f;
 
     bool collision_found = false;
+    bool sweep_found = false;
 
     int efound = data->entitiesFound;
+
+    float sweeper = 0.0f;
+    const int maxSweepSteps = 6;
+    const float sweepRange = 1.5f;
+    const float sweepStep = sweepRange / (float)maxSweepSteps; 
 
     int x, y;
     for (x = 0; x < efound; x++) {
@@ -65,166 +73,221 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
 
         boxColliderA = data->colliders->at(x);
         rigidbodyA   = data->rigidbodies->at(x);
-        if (boxColliderA == 0 && rigidbodyA == 0) continue;
+        if (boxColliderA == 0 || rigidbodyA == 0) continue;
+
+        scaleA = boxColliderA->scale(); 
+        positionA = transformA->position(); 
+
+        hwidthA  = scaleA->x / 4.0f;
+        hheightA = scaleA->y / 4.0f;
+        hdepthA  = scaleA->z / 4.0f;
+
+        acenterx = boxColliderA->center()->x;
+        acentery = boxColliderA->center()->y;
+        acenterz = boxColliderA->center()->z;
+
+        sweep_found = false;
 
         for (y = 0; y < efound; y++) {
             transformB = data->transforms->at(y);
-            if (transformB == 0 || transformA == transformB) continue;
+            if (x == y || transformB == 0 || transformB == transformA) continue;
             
-            rigidbodyB = data->rigidbodies->at(y);
+            rigidbodyB   = data->rigidbodies->at(y);
             boxColliderB = data->colliders->at(y);
-            if (boxColliderB == 0 && rigidbodyB == 0) continue;
+            if (boxColliderB == 0) continue;
             
-            if (rigidbodyA == 0 && rigidbodyB == 0) continue;
-            
-            collision_found = false;
-
-            scaleA = boxColliderA->scale(); 
-            scaleB = boxColliderB->scale();  
-            
-            positionA = transformA->position(); 
+            scaleB    = boxColliderB->scale();     
             positionB = transformB->position();
 
-            hwidthA  = scaleA->x / 2.0f;
-            hheightA = scaleA->y / 2.0f;
-            hdepthA  = scaleA->z / 2.0f;
-
-            hwidthB  = scaleB->x / 2.0f;
-            hheightB = scaleB->y / 2.0f;
-            hdepthB  = scaleB->z / 2.0f;
-
-            acenterx = boxColliderA->center()->x;
-            acentery = boxColliderA->center()->y;
-            acenterz = boxColliderA->center()->z;
+            hwidthB  = scaleB->x / 4.0f;
+            hheightB = scaleB->y / 4.0f;
+            hdepthB  = scaleB->z / 4.0f;
 
             bcenterx = boxColliderB->center()->x;
             bcentery = boxColliderB->center()->y;
             bcenterz = boxColliderB->center()->z;
 
+            boxB.min.x = (positionB->x + bcenterx) - hwidthB;
+            boxB.min.y = (positionB->y + bcentery) - hheightB;
+            boxB.min.z = (positionB->z + bcenterz) - hdepthB;
 
-            boxA.min.x = (positionA->x - hwidthA)  + acenterx;
-            boxA.min.y = (positionA->y - hheightA) + acentery;
-            boxA.min.z = (positionA->z - hdepthA)  + acenterz;
+            boxB.max.x = (positionB->x + bcenterx) + hwidthB;
+            boxB.max.y = (positionB->y + bcentery) + hheightB;
+            boxB.max.z = (positionB->z + bcenterz) + hdepthB;
 
-            boxA.max.x = (positionA->x + hwidthA)  + acenterx;
-            boxA.max.y = (positionA->y + hheightA) + acentery;
-            boxA.max.z = (positionA->z + hdepthA)  + acenterz;
+            box_pred.min.x = boxA.min.x = (positionA->x + acenterx) - hwidthA;
+            box_pred.min.y = boxA.min.y = (positionA->y + acentery) - hheightA;
+            box_pred.min.z = boxA.min.z = (positionA->z + acenterz) - hdepthA;
 
-
-            boxB.min.x = (positionB->x - hwidthB)  + bcenterx;
-            boxB.min.y = (positionB->y - hheightB) + bcentery;
-            boxB.min.z = (positionB->z - hdepthB)  + bcenterz;
-
-            boxB.max.x = (positionB->x + hwidthB)  + bcenterx;
-            boxB.max.y = (positionB->y + hheightB) + bcentery;
-            boxB.max.z = (positionB->z + hdepthB)  + bcenterz;
+            box_pred.max.x = boxA.max.x = (positionA->x + acenterx) + hwidthA;
+            box_pred.max.y = boxA.max.y = (positionA->y + acentery) + hheightA;
+            box_pred.max.z = boxA.max.z = (positionA->z + acenterz) + hdepthA;
 
 
-            if (CheckCollisionBoxes(boxA, boxB)) {
-                if ((rigidbodyA != 0 && rigidbodyB == 0))
-                {
-                   // printf("- COLLISION :single: [ %s(collider: %d, rigidbody: %d) ... %s(collider: %d, rigidbody: %d) ]\n", 
-                    //            "nameA", boxColliderA != 0, rigidbodyA != 0, "nameB", boxColliderB != 0, rigidbodyB != 0);
-                    /* float x = 0;
-                    if (positionB->x < positionA->x)
-                        x = (positionA->x - positionB->x)
-                    else
-                        x = (positionB->x - positionA->x)
+            collision_found = CheckCollisionBoxes(boxA, boxB);
+            sweep_found = false;
 
-                    float y = 0;
-                    if (positionB->y < positionA->y)
-                        y = (positionA->y - positionB->y)
-                    else
-                        y = (positionB->y - positionA->y)
+            /// Box Sweep
+            //if (!collision_found) {
+                Vector3 vel = //Vector3Normalize(
+                    *(rigidbodyA->velocity());//);
+                float velX = vel.x * sweepStep;// * 0.71f;
+                float velY = vel.y * sweepStep;// * 0.71f;
+                float velZ = vel.z * sweepStep;// * 0.71f;
 
-                    float z = 0;
-                    if (positionB->z < positionA->z)
-                        z = (positionA->z - positionB->z)
-                    else
-                        z = (positionB->z - positionA->z)
+                for (sweeper = 0.0f; sweeper < sweepRange; sweeper+=sweepStep) {
+                    box_pred.min.x = boxA.min.x * velX * sweeper;
+                    box_pred.min.y = boxA.min.y * velY * sweeper;
+                    box_pred.min.z = boxA.min.z * velZ * sweeper;
 
-                    positionA->x += x * global_collision_pushback_force;
-                    positionA->y += y * global_collision_pushback_force;
-                    positionA->z += z * global_collision_pushback_force;*/
-                  //  Vector3 dir = (Vector3){
-                  //      (positionA->x - positionB->x),
-                  //      (positionA->y - positionB->y),
-                  //      (positionA->z - positionB->z)
-                  //  };
-                    //rigidbodyA->velocity()->x *
-                    //rigidbodyA->velocity()->y *
-                    //rigidbodyA->velocity()->z *
+                    box_pred.max.x = boxA.max.x * velX * sweeper;
+                    box_pred.max.y = boxA.max.y * velY * sweeper;
+                    box_pred.max.z = boxA.max.z * velZ * sweeper;
 
-                    positionA->x += (positionA->x - positionB->x) * global_collision_pushback_force;
-                    positionA->y += (positionA->y - positionB->y) * global_collision_pushback_force;
-                    positionA->z += (positionA->z - positionB->z) * global_collision_pushback_force;
-                    
-                    rigidbodyA->velocity()->x = 0.0f; /// (positionA->x - positionB->x) * global_collision_pushback_force * 0.1f; ///(positionA->x - positionB->x); //lerp(rigidbodyA->velocity()->x, 0.0f, global_collision_dampen_rate);
-                    rigidbodyA->velocity()->y = 0.0f; /// (positionA->y - positionB->y) * global_collision_pushback_force * 0.1f; ///(positionA->y - positionB->y); //lerp(rigidbodyA->velocity()->y, 0.0f, global_collision_dampen_rate);
-                    rigidbodyA->velocity()->z = 0.0f; /// (positionA->z - positionB->z) * global_collision_pushback_force * 0.1f; ///(positionA->z - positionB->z); //lerp(rigidbodyA->velocity()->z, 0.0f, global_collision_dampen_rate);
-                    
-                    boxColliderB->OnCollision(boxColliderA);
-                    boxColliderA->OnCollision(boxColliderB);
-
-                    collision_found = true;
-                }
-            } 
-            if (!collision_found) {
-                //printf("- no collision [ %s ... %s ]\n", nameA, nameB);
-
-                if (rigidbodyA != 0) {
-                    boxA.min.x += rigidbodyA->velocity()->x * global_physics_movement_rate * 0.0025f;
-                    boxA.min.y += rigidbodyA->velocity()->y * global_physics_movement_rate * 0.0025f;
-                    boxA.min.z += rigidbodyA->velocity()->z * global_physics_movement_rate * 0.0025f;
-
-                    boxA.max.x += rigidbodyA->velocity()->x * global_physics_movement_rate * 0.0025f;
-                    boxA.max.y += rigidbodyA->velocity()->y * global_physics_movement_rate * 0.0025f;
-                    boxA.max.z += rigidbodyA->velocity()->z * global_physics_movement_rate * 0.0025f;
-
-                    if (!CheckCollisionBoxes(boxA, boxB)) {
-            
-                        boxA.min.x += rigidbodyA->velocity()->x * global_physics_movement_rate * 0.025f;
-                        boxA.min.y += rigidbodyA->velocity()->y * global_physics_movement_rate * 0.025f;
-                        boxA.min.z += rigidbodyA->velocity()->z * global_physics_movement_rate * 0.025f;
-
-                        boxA.max.x += rigidbodyA->velocity()->x * global_physics_movement_rate * 0.025f;
-                        boxA.max.y += rigidbodyA->velocity()->y * global_physics_movement_rate * 0.025f;
-                        boxA.max.z += rigidbodyA->velocity()->z * global_physics_movement_rate * 0.025f;
-
-                        if (!CheckCollisionBoxes(boxA, boxB)) {
-                            transformA->position()->x += rigidbodyA->velocity()->x * global_physics_movement_rate;
-                            transformA->position()->y += rigidbodyA->velocity()->y * global_physics_movement_rate;
-                            transformA->position()->z += rigidbodyA->velocity()->z * global_physics_movement_rate;
-                            
-                            rigidbodyA->velocity()->x = lerp(rigidbodyA->velocity()->x, 0.0f, global_physics_dampen_rate);
-                            rigidbodyA->velocity()->y = lerp(rigidbodyA->velocity()->y, 0.0f, global_physics_dampen_rate);
-                            rigidbodyA->velocity()->z = lerp(rigidbodyA->velocity()->z, 0.0f, global_physics_dampen_rate);
-
-                            rigidbodyA->velocity()->y += global_physics_gravity * -global_physics_gravity * ((0.6f + rigidbodyA->velocity()->y) / 1000);
-    
-                            if (rigidbodyA->velocity()->y < -1000) rigidbodyA->velocity()->y = -1000;
-                            if (rigidbodyA->velocity()->y >  1000) rigidbodyA->velocity()->y =  1000;
-                            
-                            if (transformA->position()->y < boxColliderA->scale()->y/2.0f) {
-                                transformA->position()->y = boxColliderA->scale()->y/2.0f;
-                                rigidbodyA->velocity()->y = 0.0f;
-                            }   
-
-                        } else {
-                            rigidbodyA->velocity()->x = 0.0f; ///(positionA->x - positionB->x) ;//lerp(rigidbodyA->velocity()->x, 0.0f, global_physics_dampen_rate);
-                            rigidbodyA->velocity()->y = 0.0f; ///(positionA->y - positionB->y) ;//lerp(rigidbodyA->velocity()->y, 0.0f, global_physics_dampen_rate);
-                            rigidbodyA->velocity()->z = 0.0f; ///(positionA->z - positionB->z) ;//lerp(rigidbodyA->velocity()->z, 0.0f, global_physics_dampen_rate);
-                        }
-                    } else {
-                        rigidbodyA->velocity()->x = 0.0f; ///(positionA->x - positionB->x) ;//lerp(rigidbodyA->velocity()->x, 0.0f, global_physics_dampen_rate);
-                        rigidbodyA->velocity()->y = 0.0f; ///(positionA->y - positionB->y) ;//lerp(rigidbodyA->velocity()->y, 0.0f, global_physics_dampen_rate);
-                        rigidbodyA->velocity()->z = 0.0f; ///(positionA->z - positionB->z) ;//lerp(rigidbodyA->velocity()->z, 0.0f, global_physics_dampen_rate);
+                    if (CheckCollisionBoxes(box_pred, boxB)) {
+                        sweep_found = true;
+                        break;
                     }
                 }
-            }
+           // }
+
+            if (collision_found) {
+                printf("- collision found!\n");
+                
+                //float dist = Vector3DistanceSqr(*positionA, *positionB);
+                //if (dist > scaleB->)
+                 //   dist = 1000.0f;
+
+                float push_force_x = 0.8f;//((scaleB->x - dist) / scaleB->x) * 10.0f;
+                float push_force_y = 0.8f;//((scaleB->y - dist) / scaleB->y) * 10.0f;
+                float push_force_z = 0.8f;//((scaleB->z - dist) / scaleB->z) * 10.0f;
+
+                // hit something, adjust velocity
+                rigidbodyA->velocity()->x *= push_force_x * timedelta;
+                rigidbodyA->velocity()->y *= push_force_y * timedelta;
+                rigidbodyA->velocity()->z *= push_force_z * timedelta;
+
+                Vector3 push_dir = Vector3Normalize((Vector3){
+                    .x = (positionA->x - positionB->x) * push_force_x,
+                    .y = (positionA->y - positionB->y) * push_force_y,
+                    .z = (positionA->z - positionB->z) * push_force_z
+                });
+                
+                positionA->x += push_dir.x * global_collision_pushback_force * timedelta * 1.0f;
+                positionA->y += push_dir.y * global_collision_pushback_force * timedelta * 1.0f;
+                positionA->z += push_dir.z * global_collision_pushback_force * timedelta * 1.0f;
+
+                boxColliderB->OnCollision(boxColliderA);
+                boxColliderA->OnCollision(boxColliderB);
+
+            } if (sweep_found) {
+                printf("- sweep found!\n");
+                // dampen velocity
+                //rigidbodyA->velocity()->x *= 0.95f * timedelta;///*(positionA->x - positionB->x) * global_collision_pushback_force * 0.1f;*/ lerp(rigidbodyA->velocity()->x, 0.0f, global_physics_sweep_dampen_rate);
+                //rigidbodyA->velocity()->y *= 0.95f * timedelta;///*(positionA->y - positionB->y) * global_collision_pushback_force * 0.1f;*/ lerp(rigidbodyA->velocity()->y, 0.0f, global_physics_sweep_dampen_rate);
+                //rigidbodyA->velocity()->z *= 0.95f * timedelta;///*(positionA->z - positionB->z) * global_collision_pushback_force * 0.1f;*/ lerp(rigidbodyA->velocity()->z, 0.0f, global_physics_sweep_dampen_rate);
+                //positionA->x += ((positionA->x - positionB->x) * global_collision_pushback_force) * 0.01f;
+                //positionA->y += ((positionA->y - positionB->y) * global_collision_pushback_force) * 0.01f;
+                //positionA->z += ((positionA->z - positionB->z) * global_collision_pushback_force) * 0.01f;
+            } 
+            /*if (!collision_found && !sweep_found) {
+                Vector3 vel_dir = Vector3Normalize((Vector3){
+                    .x = rigidbodyA->velocity()->x,
+                    .y = rigidbodyA->velocity()->y,
+                    .z = rigidbodyA->velocity()->z
+                });
+                
+                // apply velocity to transform
+                positionA->x += vel_dir.x * global_physics_movement_rate * timedelta;
+                positionA->y += vel_dir.y * global_physics_movement_rate * timedelta;
+                positionA->z += vel_dir.z * global_physics_movement_rate * timedelta;
+                
+                // dampen velocity
+                if (rigidbodyA->velocity()->x != 0.0f)
+                    rigidbodyA->velocity()->x *= global_physics_dampen_rate * timedelta;
+                if (rigidbodyA->velocity()->y != 0.0f)
+                    rigidbodyA->velocity()->y *= global_physics_dampen_rate * timedelta;
+                if (rigidbodyA->velocity()->z != 0.0f)
+                    rigidbodyA->velocity()->z *= global_physics_dampen_rate * timedelta;
+
+                // add gravity to velocity
+                rigidbodyA->velocity()->y += timedelta * global_physics_gravity * -global_physics_gravity;//  * ((0.6f + rigidbodyA->velocity()->y) / 1000
+
+                // simple vertical bounds
+                if (rigidbodyA->velocity()->y < -1000) 
+                    rigidbodyA->velocity()->y = -1000;
+                if (rigidbodyA->velocity()->y >  1000) 
+                    rigidbodyA->velocity()->y =  1000;
+                
+                // ground height check
+                if (positionA->y < boxColliderA->scale()->y/2.0f) {
+                    positionA->y = boxColliderA->scale()->y/2.0f;
+                    rigidbodyA->velocity()->y = 0.0f;
+                }   
+
+            }*/
 
         }
+        //if (!sweep_found) {//}
+
+        const float drag = 0.1f;
+
+        Vector3 vel_dir = //Vector3Normalize(
+            *(rigidbodyA->velocity());//);
+        
+        // apply velocity to transform
+        positionA->x += vel_dir.x * global_physics_movement_rate * timedelta;
+        positionA->y += vel_dir.y * global_physics_movement_rate * timedelta;
+        positionA->z += vel_dir.z * global_physics_movement_rate * timedelta;
+        
+        // dampen velocity
+        float damp = global_physics_dampen_rate * timedelta;
+        if (rigidbodyA->velocity()->x < 0.0f) {
+            // add
+            rigidbodyA->velocity()->x += damp;
+        } else if (rigidbodyA->velocity()->x > 0.0f) {
+            // sub
+            rigidbodyA->velocity()->x -= damp;
+        }  
+
+        if (rigidbodyA->velocity()->y < 0.0f) {
+            // add
+            rigidbodyA->velocity()->y += damp;
+        } else if (rigidbodyA->velocity()->y > 0.0f) {
+            // sub
+            rigidbodyA->velocity()->y -= damp;
+        }  
+
+        if (rigidbodyA->velocity()->z < 0.0f) {
+            // add
+            rigidbodyA->velocity()->z += damp;
+        } else if (rigidbodyA->velocity()->z > 0.0f) {
+            // sub
+            rigidbodyA->velocity()->z -= damp;
+        }  
+        
+        //rigidbodyA->velocity()->x *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->x, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
+        //rigidbodyA->velocity()->y *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->y, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
+        //rigidbodyA->velocity()->z *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->z, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
+
+        // add gravity to velocity
+        rigidbodyA->velocity()->y += timedelta * global_physics_gravity * -global_physics_gravity;//  * ((0.6f + rigidbodyA->velocity()->y) / 1000
+
+        // simple vertical bounds
+        if (rigidbodyA->velocity()->y < -1000) 
+            rigidbodyA->velocity()->y = -1000;
+        if (rigidbodyA->velocity()->y >  1000) 
+            rigidbodyA->velocity()->y =  1000;
+        
+        // ground height check
+        if (positionA->y < boxColliderA->scale()->y/2.0f) {
+            positionA->y = boxColliderA->scale()->y/2.0f;
+            rigidbodyA->velocity()->y = 0.0f;
+        }   
     }
+
+
+   // }
 
 }
 
