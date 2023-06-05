@@ -360,7 +360,16 @@ public:
 
     ICastable* Instantiate(ECS::World* world, std::string object_type, std::string object_meta) {
         if (object_type == "static_model") {
-            return new StaticModel(world, object_meta);
+            auto sm = new StaticModel(world, object_meta);
+            auto box = sm->BoxCollider();
+            *(box->scale()) = (Vector3){
+                .x = 2,
+                .y = 2,
+                .z = 2
+            };
+            box->center()->y = 0.5f;
+
+            return sm;
         }
         if (object_type == "static_mesh") {
             printf("- Rendering::Factory::Instantiate : no-impl : static_mesh\n");

@@ -124,38 +124,76 @@ void RenderPipeline::Render(Camera* camera, GUI::Canvas* canvas, ECS::World* wor
         &renderers
     );
 
-    int efound = 0;
-    int ecount = world->CurrentEntityCount();
-    for (int i = 0; i < ecount; i++) {
-        auto e = world->GetEntity(i);
-
-        transforms[i] = 0;
-        renderers[i] = 0;
-
-        if (e->HasComponent("transform") && e->HasComponent("model-renderer")) {
-            transforms[i] = ((ECS::Transform*)e->GetComponent("transform"));
-            renderers[i] = ((Rendering::ModelRenderer*)e->GetComponent("model-renderer"));
-            //PrintD("found valid renderable (transform, model-renderer)")
-            efound++;
-        }
-    }
-
-    rpd_model.entitiesFound = efound;
 
 
     BeginDrawing();
         
         ClearBackground(SKYBLUE);
 
+        this->DrawModels3D(camera, &rpd_model);
+
+        OnRender(camera, world);
+
         BeginMode3D(*camera);
+
+        int efound = 0;
+        int ecount = world->CurrentEntityCount();
+        for (int i = 0; i < ecount; i++) {
+            auto e = world->GetEntity(i);
+
+            transforms[i] = 0;
+            renderers[i] = 0;
+
+            if (e->HasComponent("transform")) {
+                if (e->HasComponent("model-renderer")) {
+                    transforms[i] = (ECS::Transform*)(e->GetComponent("transform"));
+                    renderers[i] = (Rendering::ModelRenderer*)(e->GetComponent("model-renderer"));
+                    //PrintD("found valid renderable (transform, model-renderer)")
+                    efound++;
+                }
+                
+                if (transforms[i] != 0) { /// debug all transforms/box-colliders
+                    Color color = RED;
+                    color.a = 150;
+
+                    auto pos = *(transforms[i]->position());
+
+                    if (e->HasComponent("box-collider")) {
+                        auto box = (Physics::BoxCollider*)(e->GetComponent("box-collider"));
+                        auto box_center = box->center();
+                        
+                        pos.x += box_center->x;///2.0f;
+                        pos.y += box_center->y;///2.0f;
+                        pos.z += box_center->z;///2.0f;
+                        
+                        auto box_scale = *(box->scale());
+                        box_scale.x /= 2.0f;
+                        box_scale.y /= 2.0f;
+                        box_scale.z /= 2.0f;
+
+                        DrawCubeWiresV(pos, box_scale, color);
+                    } else {
+                        /// only a transform
+                        float radius = Vector3Length(*(transforms[i]->scale()));
+                        DrawSphereWires(pos, radius, 4, 4, color);
+                    }
+
+                }
+
+            }
+
+        }
+
+        rpd_model.entitiesFound = efound;
+
+
             DrawGrid(100, 100);
+
         EndMode3D();
 
         //this->DrawSprites3D(camera, &rpd_sprite);
         //this->DrawMeshes3D(camera, &rpd_mesh);
-        this->DrawModels3D(camera, &rpd_model);
-
-        OnRender(camera, world);
+        
 
         canvas->Update();
 
