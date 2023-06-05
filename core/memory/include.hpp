@@ -14,6 +14,13 @@ extern "C" {
 namespace MAGE {
 namespace Memory {
 
+/// dynamic mem buckets
+// track count of alloc's and free's
+// when count == 0
+//  clear/memset arena and reset sp
+
+
+
 template<class T>
 class ArenaVar {
 public:
