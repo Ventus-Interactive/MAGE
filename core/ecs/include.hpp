@@ -26,10 +26,17 @@ namespace ECS {
 
 void LoadModule(lua_State* L);
 
+static int lua_WorldAddEntity           (lua_State* L);
+static int lua_WorldAddResource         (lua_State* L);
+
+static int lua_WorldTransformSetPosition(lua_State* L);
+static int lua_WorldTransformSetScale   (lua_State* L);
+
 
 class IEntity : public ICastable, public ITogglable, public IUpdatable {
 public:
     virtual const char* Name() { return "IEntity"; }
+    virtual void SetName(std::string name) { }
 
     virtual bool HasComponent(const char* name) { return false; }
     virtual void* GetComponent(const char* name) { return 0; }
@@ -62,6 +69,7 @@ public:
         this->am_components = Memory::ArenaManager(cap_components);
         ECS::World::current = this;
     }
+    void Destroy();
 
     bool TryFactoryInstantiateEntity(std::string entity_name, std::string entity_type, std::string entity_meta);
     bool TryFactoryInstantiateResource(std::string resource_name, std::string resource_type, std::string resource_meta);
@@ -71,22 +79,15 @@ public:
         this->entities.emplace(name, (IEntity*)entity);
         return this->entities.find(name) != this->entities.end();
     }
-
-    static int lua_AddEntity(lua_State* L);
     bool RemoveEntity(std::string name);
 
     IEntity* GetEntity(std::string name);
     IEntity* GetEntity(l64 index);
     
-    l64 CurrentEntityCount() { return this->entities.size(); }
-
     bool AddResource(std::string name, IResource* resource);
-    static int lua_AddResource(lua_State* L);
     IResource* GetResource(std::string name);
 
-    
-    //void ApplySystem(ISystem* system);
-
+    l64 CurrentEntityCount() { return this->entities.size(); }
     l64 GetComponentSP();
     
     template <class T>
@@ -101,7 +102,7 @@ public:
             this->resourceFactories.emplace_back(factory);
     }
 
-    void Destroy();
+    //void ApplySystem(ISystem* system);
 
 private:
     Memory::ArenaManager am_components;

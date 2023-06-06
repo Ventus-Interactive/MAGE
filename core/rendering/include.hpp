@@ -280,7 +280,8 @@ private:
 class StaticModel : public ECS::IEntity {
 public:
 
-    const char* Name() { return "StaticModel"; }
+    const char* Name() { return this->name.c_str(); }
+    void SetName(std::string name) { this->name = name; }
     
     ECS::Transform*             Transform()      { return &this->transform       ; }
     Rendering::ModelRenderer*   ModelRenderer()  { return &this->modelRenderer   ; }
@@ -314,6 +315,8 @@ public:
     }
 
 private:
+    std::string name;
+
     ECS::Transform transform;
     Physics::BoxCollider boxCollider;
     Rendering::ModelRenderer modelRenderer;

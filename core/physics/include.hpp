@@ -17,6 +17,11 @@ namespace Physics {
     
 void LoadModule(lua_State* L);
 
+static int lua_WorldBoxSetScale         (lua_State* L);
+static int lua_WorldBoxSetCenter        (lua_State* L);
+static int lua_WorldBoxSetIsTrigger     (lua_State* L);
+
+
 /*- Global Forces (wind, water, gravity, drag, etc..)
 
 - Collision/Trigger Callbacks
@@ -40,7 +45,11 @@ public:
 
 class BoxCollisionEvent : public Events::IEventData {
 public:
-    BoxCollisionEvent(BoxCollider* other) { this->other = other; }
+    BoxCollisionEvent(std::string owner, BoxCollider* other) { 
+        this->owner = owner;
+        this->other = other; 
+    }
+    std::string owner;
     BoxCollider* other;
 
 };
@@ -50,19 +59,28 @@ public:
         this->data.Set(world->CreateComponent(
             (cBoxColliderData){
                 .center = Vector3Zero(),
-                .scale = Vector3One()
+                .scale = Vector3One(),
+                .is_trigger = false
             }
         ));
     }
 
-    inline Vector3* center() { return &(this->data.Get()->center); }
-    inline Vector3* scale()  { return &(this->data.Get()->scale ); }
+    inline Vector3*  center() { return &(this->data.Get()->center    ); }
+    inline Vector3*   scale() { return &(this->data.Get()->scale     ); }
+    inline bool* is_trigger() { return &(this->data.Get()->is_trigger); }
 
-    void OnCollision(BoxCollider* other) {
+    void OnCollision(std::string owner, BoxCollider* other) {
+        PrintD("OnBoxCollision:: pushing event!")
+        //printf("Events::Update:: event: %s\n", other->Name());
+        
+        std::string event_name = "on-collision-box";
+        if (*(other->is_trigger()))
+            event_name = "on-trigger-box";
+
         Events::EventManager::current->PushEvent(
             Events::EventData(
-                "on-collision-box",
-                new BoxCollisionEvent(other)
+                event_name,
+                new BoxCollisionEvent(owner, other)
             )
         );
     }
@@ -123,16 +141,19 @@ template<class T>
 class CollisionProcedureData {
 public:
     int entitiesFound;
+    std::vector<std::string>*             owners;
     std::vector<ECS::Transform*>*         transforms;
     std::vector<T*>*                      colliders;
     std::vector<Physics::Rigidbody*>*     rigidbodies;
     CollisionProcedureData(
         int entitiesFound,
+        std::vector<std::string>*         owners,
         std::vector<ECS::Transform*>*     transforms,
         std::vector<T*>*                  colliders,
         std::vector<Physics::Rigidbody*>* rigidbodies
     ) {
         this->entitiesFound = entitiesFound;
+        this->owners = owners;
         this->transforms = transforms;
         this->colliders = colliders;
         this->rigidbodies = rigidbodies;

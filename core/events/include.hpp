@@ -27,11 +27,6 @@ public:
     //virtual void* Get() { return (void*)0; }
 };
 
-class IEventListener : public ICastable {
-public:
-    virtual void OnEvent(IEventData* data) {}
-};
-
 struct EventData {
 public:
     std::string name;
@@ -44,6 +39,12 @@ public:
         this->name = name;
         this->data = data;
     }
+};
+
+class IEventListener : public ITogglable {
+public:
+    virtual void ToggleState() {}
+    virtual void OnEvent(EventData* data) {}
 };
 
 class EventManager : public IUpdatable {

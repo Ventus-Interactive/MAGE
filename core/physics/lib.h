@@ -11,6 +11,7 @@
 DS(cBoxColliderData,
     Vector3 center;
     Vector3 scale;
+    bool is_trigger;
 )
 DS(cRigidbodyData,
     float mass;

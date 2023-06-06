@@ -19,16 +19,65 @@ namespace Physics {
 
 
 void LoadModule(lua_State* L) {
-    //lua_register(L, "h_world_add_resource", World::lua_AddResource);
-    //lua_register(L, "h_world_add_entity"  , World::lua_AddEntity  );
+    lua_register(L, "h_core_physics_world_box_set_scale", lua_WorldBoxSetScale);
+    lua_register(L, "h_core_physics_world_box_set_center", lua_WorldBoxSetCenter);
+    lua_register(L, "h_core_physics_world_box_set_istrigger", lua_WorldBoxSetIsTrigger);
 
     luaL_dofile(L, "resources/scripts/core/physics.lua");
     lua_setglobal(L, "physics");  // expose reference
     lua_settop(L, 0);   // clear the stack
 }
 
+int lua_WorldBoxSetScale(lua_State* L) {
+    std::string entity_name = lua_tostring(L, 1);
+    auto entity = ECS::World::current->GetEntity(entity_name);
+
+    Physics::BoxCollider* box = (Physics::BoxCollider*)entity->GetComponent("box-collider");
+    if (box == 0) return 0;
+    
+    float x = (float)lua_tonumber(L, 2);
+    float y = (float)lua_tonumber(L, 3);
+    float z = (float)lua_tonumber(L, 4);
+
+    *(box->scale()) = (Vector3){x, y ,z};
+
+    return 0;
+}
+int lua_WorldBoxSetCenter(lua_State* L) {
+    std::string entity_name = lua_tostring(L, 1);
+    auto entity = ECS::World::current->GetEntity(entity_name);
+
+    Physics::BoxCollider* box = (Physics::BoxCollider*)entity->GetComponent("box-collider");
+    if (box == 0) return 0;
+    
+    float x = (float)lua_tonumber(L, 2);
+    float y = (float)lua_tonumber(L, 3);
+    float z = (float)lua_tonumber(L, 4);
+
+    *(box->center()) = (Vector3){x, y ,z};
+
+    return 0;
+}
+int lua_WorldBoxSetIsTrigger(lua_State* L) {
+    std::string entity_name = lua_tostring(L, 1);
+    auto entity = ECS::World::current->GetEntity(entity_name);
+
+    Physics::BoxCollider* box = (Physics::BoxCollider*)entity->GetComponent("box-collider");
+    if (box == 0) return 0;
+    
+    bool is_trigger = (bool)lua_toboolean(L, 2);
+
+    *(box->is_trigger()) = is_trigger;
+
+    return 0;
+}
+
+
+
+
 void RegisterEvents(Events::EventManager* eventManager) {
     eventManager->RegisterEvent("on-collision-box");
+    eventManager->RegisterEvent("on-trigger-box");
 }
 
 
@@ -51,7 +100,7 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
 
     const float global_physics_gravity          = -9.2f;
     const float global_physics_movement_rate    = 1.0f;
-    const float global_physics_dampen_rate      = 0.0085f;
+    const float global_physics_dampen_rate      = 0.085f;
     //const float global_physics_sweep_dampen_rate= 1.0f;
     //const float global_collision_dampen_rate    = 1.0f;
     const float global_collision_pushback_force = 1.0f;
@@ -61,10 +110,11 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
 
     int efound = data->entitiesFound;
 
-    float sweeper = 0.0f;
-    const int maxSweepSteps = 6;
-    const float sweepRange = 1.5f;
+    int sweeper = 0;
+    const int maxSweepSteps = 100;
+    const float sweepRange = 21.5f;
     const float sweepStep = sweepRange / (float)maxSweepSteps; 
+
 
     int x, y;
     for (x = 0; x < efound; x++) {
@@ -125,24 +175,34 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
 
 
             collision_found = CheckCollisionBoxes(boxA, boxB);
+
+            if (collision_found && *(boxColliderB->is_trigger())) {
+                boxColliderA->OnCollision(data->owners->at(y), boxColliderB);
+                collision_found = false;
+               // if (rigidbodyB == 0)
+                //    boxColliderB->OnCollision(data->owners->at(x), boxColliderA);
+                continue;
+            }
+
+
             sweep_found = false;
 
             /// Box Sweep
             //if (!collision_found) {
-                Vector3 vel = //Vector3Normalize(
-                    *(rigidbodyA->velocity());//);
-                float velX = vel.x * sweepStep;// * 0.71f;
-                float velY = vel.y * sweepStep;// * 0.71f;
-                float velZ = vel.z * sweepStep;// * 0.71f;
+                Vector3 vel = Vector3Normalize(
+                    *(rigidbodyA->velocity()));
+                float velX = vel.x * .31f;
+                float velY = vel.y * .31f;
+                float velZ = vel.z * .31f;
 
-                for (sweeper = 0.0f; sweeper < sweepRange; sweeper+=sweepStep) {
-                    box_pred.min.x = boxA.min.x * velX * sweeper;
-                    box_pred.min.y = boxA.min.y * velY * sweeper;
-                    box_pred.min.z = boxA.min.z * velZ * sweeper;
+                for (sweeper = 0; sweeper < maxSweepSteps; sweeper++) {
+                    box_pred.min.x = boxA.min.x * velX * sweeper * sweepStep;
+                    box_pred.min.y = boxA.min.y * velY * sweeper * sweepStep;
+                    box_pred.min.z = boxA.min.z * velZ * sweeper * sweepStep;
 
-                    box_pred.max.x = boxA.max.x * velX * sweeper;
-                    box_pred.max.y = boxA.max.y * velY * sweeper;
-                    box_pred.max.z = boxA.max.z * velZ * sweeper;
+                    box_pred.max.x = boxA.max.x * velX * sweeper * sweepStep;
+                    box_pred.max.y = boxA.max.y * velY * sweeper * sweepStep;
+                    box_pred.max.z = boxA.max.z * velZ * sweeper * sweepStep;
 
                     if (CheckCollisionBoxes(box_pred, boxB)) {
                         sweep_found = true;
@@ -158,27 +218,28 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
                 //if (dist > scaleB->)
                  //   dist = 1000.0f;
 
-                float push_force_x = 0.8f;//((scaleB->x - dist) / scaleB->x) * 10.0f;
-                float push_force_y = 0.8f;//((scaleB->y - dist) / scaleB->y) * 10.0f;
-                float push_force_z = 0.8f;//((scaleB->z - dist) / scaleB->z) * 10.0f;
+                float push_force_x = 0.5f * (sweeper / sweepRange);//((scaleB->x - dist) / scaleB->x) * 10.0f;
+                float push_force_y = 0.5f * (sweeper / sweepRange);//((scaleB->y - dist) / scaleB->y) * 10.0f;
+                float push_force_z = 0.5f * (sweeper / sweepRange);//((scaleB->z - dist) / scaleB->z) * 10.0f;
 
                 // hit something, adjust velocity
-                rigidbodyA->velocity()->x *= push_force_x * timedelta;
-                rigidbodyA->velocity()->y *= push_force_y * timedelta;
-                rigidbodyA->velocity()->z *= push_force_z * timedelta;
+                rigidbodyA->velocity()->x = 0.0f; // *= push_force_x * timedelta;
+                rigidbodyA->velocity()->y = 0.0f; // *= push_force_y * timedelta;
+                rigidbodyA->velocity()->z = 0.0f; // *= push_force_z * timedelta;
 
                 Vector3 push_dir = Vector3Normalize((Vector3){
-                    .x = (positionA->x - positionB->x) * push_force_x,
-                    .y = (positionA->y - positionB->y) * push_force_y,
-                    .z = (positionA->z - positionB->z) * push_force_z
+                    .x = (positionA->x - positionB->x),
+                    .y = (positionA->y - positionB->y),
+                    .z = (positionA->z - positionB->z)
                 });
                 
-                positionA->x += push_dir.x * global_collision_pushback_force * timedelta * 1.0f;
-                positionA->y += push_dir.y * global_collision_pushback_force * timedelta * 1.0f;
-                positionA->z += push_dir.z * global_collision_pushback_force * timedelta * 1.0f;
+                positionA->x += push_dir.x * global_collision_pushback_force * push_force_x * timedelta * 0.5f;
+                positionA->y += push_dir.y * global_collision_pushback_force * push_force_y * timedelta * 0.5f;
+                positionA->z += push_dir.z * global_collision_pushback_force * push_force_z * timedelta * 0.5f;
 
-                boxColliderB->OnCollision(boxColliderA);
-                boxColliderA->OnCollision(boxColliderB);
+                boxColliderA->OnCollision(data->owners->at(y), boxColliderB);
+                //if (rigidbodyB == 0)
+                  //  boxColliderB->OnCollision(data->owners->at(x), boxColliderA);
 
             } if (sweep_found) {
                 printf("- sweep found!\n");
@@ -228,77 +289,82 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
             }*/
 
         }
-        //if (!sweep_found) {//}
+        if (!collision_found) {//}
 
+        Vector3* velp = rigidbodyA->velocity();
         const float drag = 0.1f;
 
         Vector3 vel_dir = //Vector3Normalize(
-            *(rigidbodyA->velocity());//);
+            *(velp);//);
         
         // apply velocity to transform
         positionA->x += vel_dir.x * global_physics_movement_rate * timedelta;
         positionA->y += vel_dir.y * global_physics_movement_rate * timedelta;
         positionA->z += vel_dir.z * global_physics_movement_rate * timedelta;
         
-        // dampen velocity
-        float damp = global_physics_dampen_rate * timedelta;
-        if (rigidbodyA->velocity()->x < 0.0f) {
-            // add
-            rigidbodyA->velocity()->x += damp;
-        } else if (rigidbodyA->velocity()->x > 0.0f) {
-            // sub
-            rigidbodyA->velocity()->x -= damp;
-        }  
 
-        if (rigidbodyA->velocity()->y < 0.0f) {
-            // add
-            rigidbodyA->velocity()->y += damp;
-        } else if (rigidbodyA->velocity()->y > 0.0f) {
-            // sub
-            rigidbodyA->velocity()->y -= damp;
-        }  
-
-        if (rigidbodyA->velocity()->z < 0.0f) {
-            // add
-            rigidbodyA->velocity()->z += damp;
-        } else if (rigidbodyA->velocity()->z > 0.0f) {
-            // sub
-            rigidbodyA->velocity()->z -= damp;
-        }  
-        
         //rigidbodyA->velocity()->x *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->x, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
         //rigidbodyA->velocity()->y *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->y, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
         //rigidbodyA->velocity()->z *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->z, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
 
         // add gravity to velocity
-        rigidbodyA->velocity()->y += timedelta * global_physics_gravity * -global_physics_gravity;//  * ((0.6f + rigidbodyA->velocity()->y) / 1000
+        velp->y += timedelta * global_physics_gravity * -global_physics_gravity;//  * ((0.6f + rigidbodyA->velocity()->y) / 1000
+
+        // dampen velocity
+        float damp = global_physics_dampen_rate * timedelta;
+        if (velp->x < 0.0f) {
+            // add
+            velp->x += damp;
+        } else if (velp->x > 0.0f) {
+            // sub
+            velp->x -= damp;
+        }  
+
+        if (velp->y < 0.0f) {
+            // add
+            velp->y += damp;
+        } else if (velp->y > 0.0f) {
+            // sub
+            velp->y -= damp;
+        }  
+
+        if (velp->z < 0.0f) {
+            // add
+            velp->z += damp;
+        } else if (velp->z > 0.0f) {
+            // sub
+            velp->z -= damp;
+        }  
+        
 
         // simple vertical bounds
-        if (rigidbodyA->velocity()->y < -1000) 
-            rigidbodyA->velocity()->y = -1000;
-        if (rigidbodyA->velocity()->y >  1000) 
-            rigidbodyA->velocity()->y =  1000;
+        if (velp->y < -1000) 
+            velp->y = -1000;
+        if (velp->y >  1000) 
+            velp->y =  1000;
         
         // ground height check
         if (positionA->y < boxColliderA->scale()->y/2.0f) {
             positionA->y = boxColliderA->scale()->y/2.0f;
-            rigidbodyA->velocity()->y = 0.0f;
+            velp->y = 0.0f;
         }   
     }
 
 
-   // }
+    }
 
 }
 
 void ManageWorld(ECS::World* world) {
    
+    static auto owners = std::vector<std::string>(100);
     static auto transforms = std::vector<ECS::Transform*>(100);
     static auto colliders = std::vector<Physics::BoxCollider*>(100);
     static auto rigidbodies = std::vector<Physics::Rigidbody*>(100);
 
     static auto rpd_box = Physics::CollisionProcedureData<Physics::BoxCollider>(
         0,
+        &owners,
         &transforms,
         &colliders,
         &rigidbodies
@@ -310,12 +376,14 @@ void ManageWorld(ECS::World* world) {
     for (int i = 0; i < ecount; i++) {
         auto e = world->GetEntity(i);
 
+        owners[i]      = "";
         transforms[i]  = 0;
         colliders[i]   = 0;
         rigidbodies[i] = 0;
 
         if (e->HasComponent("transform") && (e->HasComponent("rigidbody") || e->HasComponent("box-collider"))) {
-            transforms[i]  = ((ECS::Transform*)e->GetComponent("transform"));
+            owners[i]       = e->Name();
+            transforms[i]   = ((ECS::Transform*)e->GetComponent("transform"));
 
             if (e->HasComponent("rigidbody")) {
                 rigidbodies[i] = ((Physics::Rigidbody*)e->GetComponent("rigidbody"));

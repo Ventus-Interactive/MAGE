@@ -25,8 +25,11 @@ namespace ECS {
 World* World::current;
 
 void LoadModule(lua_State* L) {
-    lua_register(L, "h_core_ecs_world_add_resource", World::lua_AddResource);
-    lua_register(L, "h_core_ecs_world_add_entity"  , World::lua_AddEntity  );
+    lua_register(L, "h_core_ecs_world_add_resource", lua_WorldAddResource);
+    lua_register(L, "h_core_ecs_world_add_entity"  , lua_WorldAddEntity  );
+
+    lua_register(L, "h_core_ecs_world_transform_set_position", lua_WorldTransformSetPosition);
+    lua_register(L, "h_core_ecs_world_transform_set_scale", lua_WorldTransformSetScale);
 
     luaL_dofile(L, "resources/scripts/core/ecs.lua");
     lua_setglobal(L, "ecs");  // expose reference
@@ -57,7 +60,9 @@ bool World::TryFactoryInstantiateResource(std::string resource_name, std::string
 bool World::TryFactoryInstantiateEntity(std::string entity_name, std::string entity_type, std::string entity_meta) {
     for (auto factory : this->entityFactories) {
         if (factory->CanInstantiate(entity_type)) {
-            return this->AddEntity(entity_name, factory->Instantiate(this, entity_type, entity_meta)->As<IEntity>());
+            auto ent = factory->Instantiate(this, entity_type, entity_meta)->As<IEntity>();
+            ent->SetName(entity_name);
+            return this->AddEntity(entity_name, ent);
         }
     }
     return false;
@@ -91,12 +96,41 @@ l64 World::GetComponentSP() {
     return this->am_components.GetArena()->sp;
 }
 
-//bool World::AddEntity(std::string name, T* entity) {
-//    this->entities.emplace(name, (IEntity*)entity);
-//    return this->entities.find(name) != this->entities.end();
-//}
 
-int World::lua_AddEntity(lua_State* L) {
+int lua_WorldTransformSetPosition(lua_State* L) {
+    std::string entity_name = lua_tostring(L, 1);
+    auto entity = ECS::World::current->GetEntity(entity_name);
+    if (entity->HasComponent("transform") == false) 
+        return 0;
+
+    ECS::Transform* transform = (ECS::Transform*)entity->GetComponent("transform");
+    
+    float x = (float)lua_tonumber(L, 2);
+    float y = (float)lua_tonumber(L, 3);
+    float z = (float)lua_tonumber(L, 4);
+
+    *(transform->position()) = (Vector3){x, y ,z};
+
+    return 0;
+}
+int lua_WorldTransformSetScale(lua_State* L) {
+    std::string entity_name = lua_tostring(L, 1);
+    auto entity = ECS::World::current->GetEntity(entity_name);
+    if (entity->HasComponent("transform") == false) 
+        return 0;
+
+    ECS::Transform* transform = (ECS::Transform*)entity->GetComponent("transform");
+    
+    float x = (float)lua_tonumber(L, 2);
+    float y = (float)lua_tonumber(L, 3);
+    float z = (float)lua_tonumber(L, 4);
+
+    *(transform->scale()) = (Vector3){x, y ,z};
+
+    return 0;
+}
+
+int lua_WorldAddEntity(lua_State* L) {
     PrintD("- World::lua_AddEntity")
     
     
@@ -157,26 +191,7 @@ int World::lua_AddEntity(lua_State* L) {
 
     return 0;
 }
-bool World::RemoveEntity(std::string name) {
-    this->entities.erase(name);
-    return this->entities.find(name) == this->entities.end();
-}
-IEntity* World::GetEntity(std::string name) {
-    return this->entities[name];
-}
-IEntity* World::GetEntity(l64 index) {
-    auto a = this->entities.begin();
-    for (int i = 0; i < index; i++) {
-        ++a;
-    }
-    return a->second;
-}
-
-bool World::AddResource(std::string name, IResource* resource) {
-    this->resources.emplace(name, resource);
-    return this->resources.find(name) != this->resources.end();
-}
-int World::lua_AddResource(lua_State* L) {
+int lua_WorldAddResource(lua_State* L) {
     PrintD("- World::lua_AddResource")
 
     // "default:pot3D:model:pot3D.obj"
@@ -237,6 +252,28 @@ int World::lua_AddResource(lua_State* L) {
 
     return 0;
 }
+
+
+bool World::RemoveEntity(std::string name) {
+    this->entities.erase(name);
+    return this->entities.find(name) == this->entities.end();
+}
+IEntity* World::GetEntity(std::string name) {
+    return this->entities[name];
+}
+IEntity* World::GetEntity(l64 index) {
+    auto a = this->entities.begin();
+    for (int i = 0; i < index; i++) {
+        ++a;
+    }
+    return a->second;
+}
+
+bool World::AddResource(std::string name, IResource* resource) {
+    this->resources.emplace(name, resource);
+    return this->resources.find(name) != this->resources.end();
+}
+
 IResource* World::GetResource(std::string name) {
     return this->resources[name];
 }

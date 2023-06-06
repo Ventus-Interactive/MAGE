@@ -49,14 +49,17 @@ void EventManager::Update() {
     while (this->events.empty() == false) {
         event = this->events.front(); 
         this->events.pop();
+
         if (this->listener_table.find(event.name) == this->listener_table.end()) 
             continue;
+            
+        printf("Events::Update:: event: %s\n", event.name.c_str());
 
         listeners = &(this->listener_table[event.name]);
         listeners_count = listeners->size();
 
         for (i = 0; i < listeners_count; i++) {
-            listeners->at(i)->OnEvent(event.data);
+            listeners->at(i)->OnEvent(&event);
         }
         
         if (event.data != 0) {
