@@ -132,7 +132,6 @@ void RenderPipeline::Render(Camera* camera, GUI::Canvas* canvas, ECS::World* wor
 
         this->DrawModels3D(camera, &rpd_model);
 
-        OnRender(camera, world);
 
         BeginMode3D(*camera);
 
@@ -190,6 +189,9 @@ void RenderPipeline::Render(Camera* camera, GUI::Canvas* canvas, ECS::World* wor
             DrawGrid(100, 100);
 
         EndMode3D();
+
+        
+        OnRender(camera, world);
 
         //this->DrawSprites3D(camera, &rpd_sprite);
         //this->DrawMeshes3D(camera, &rpd_mesh);

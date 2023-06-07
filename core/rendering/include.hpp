@@ -187,6 +187,83 @@ private:
 };
 
 
+class ParticleProfile : public IPrintable, public ITogglable {
+public:
+    ParticleProfile() {}
+    ParticleProfile(ECS::World* world, int capacity, Color tint) { 
+        cParticleProfileData comp = {0};
+        comp.capacity = capacity;
+        
+        comp.default_tint = tint;
+
+        this->data.Set(world->CreateComponent(
+            comp
+        ));
+    }
+
+    inline int*       capacity()  { return &(this->data.Get()->capacity    ); }
+    inline Color*     tint()      { return &(this->data.Get()->default_tint); }
+
+    const char* ToString() {
+       return "ParticleProfile.ToString";
+       // cModelRendererData* d = this->data.Get();
+       // Core::ClearPrintBuffer();
+       // sprintf(Core::GetPrintBuffer(),
+       //     "@model: %p, @material: %p", 
+       //       d->model ,  d->material
+       // );  // print out 'tint'
+       // 
+       // return Core::GetPrintBuffer();
+    }
+
+private:
+    Memory::ArenaVar<cParticleProfileData> data;
+};
+
+class ParticleSystem : public ECS::IEntity, public Events::IEventListener {
+public:
+    const char* Name() { return this->name.c_str(); }
+    void SetName(std::string name) { this->name = name; }
+
+    template <class T>
+    T* As() { return (T*)this; }
+
+    //float MoveSpeed() { return this->move_speed; }
+    //void  SetMoveSpeed(float move_speed) { this->move_speed = move_speed; }
+
+private:
+    std::string name;
+    //float move_speed;
+
+public: // component stuff
+    inline ECS::Transform*                  Transform()         { return &(this->transform       ); }
+    inline Rendering::ParticleProfile*      ParticleProfile()   { return &(this->particle_profile); }
+    
+    ParticleSystem(ECS::World* world, int capacity, Color tint) {
+        this->transform         = ECS::Transform(world);
+        this->particle_profile  = Rendering::ParticleProfile(world, capacity, tint); 
+    }
+
+    bool HasComponent(const char* name) {
+        return 
+            strncmp(name, "transform"   , 24) == 0 ||
+            strncmp(name, "particle-profile"   , 24) == 0;
+    }
+    void* GetComponent(const char* name) {
+        if (strncmp(name, "transform"   , 24) == 0) return this->Transform();
+        if (strncmp(name, "particle-profile"   , 24) == 0) return this->ParticleProfile();
+
+        return 0;
+    }
+
+    void OnEvent(Events::EventData* event) { }
+
+private: // components
+    ECS::Transform                  transform;
+    Rendering::ParticleProfile      particle_profile;
+};
+
+
 template<class T>
 class RenderProcedureData {
 public:

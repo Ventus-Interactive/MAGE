@@ -13,6 +13,11 @@ DS(cSpriteRendererData,
     Color tint;
 )            
 
+DS(cParticleProfileData, 
+   int capacity;
+   Color default_tint;
+)            
+
 //DS(cAnimatorData, 
 // 
 //)
