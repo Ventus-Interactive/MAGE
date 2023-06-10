@@ -291,64 +291,64 @@ void ProcessForcesAndAABB(Physics::CollisionProcedureData<Physics::BoxCollider>*
         }
         if (!collision_found) {//}
 
-        Vector3* velp = rigidbodyA->velocity();
-        const float drag = 0.1f;
+            Vector3* velp = rigidbodyA->velocity();
+            const float drag = 0.1f;
 
-        Vector3 vel_dir = //Vector3Normalize(
-            *(velp);//);
-        
-        // apply velocity to transform
-        positionA->x += vel_dir.x * global_physics_movement_rate * timedelta;
-        positionA->y += vel_dir.y * global_physics_movement_rate * timedelta;
-        positionA->z += vel_dir.z * global_physics_movement_rate * timedelta;
-        
+            Vector3 vel_dir = //Vector3Normalize(
+                *(velp);//);
+            
+            // apply velocity to transform
+            positionA->x += vel_dir.x * global_physics_movement_rate * timedelta;
+            positionA->y += vel_dir.y * global_physics_movement_rate * timedelta;
+            positionA->z += vel_dir.z * global_physics_movement_rate * timedelta;
+            
 
-        //rigidbodyA->velocity()->x *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->x, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
-        //rigidbodyA->velocity()->y *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->y, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
-        //rigidbodyA->velocity()->z *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->z, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
+            //rigidbodyA->velocity()->x *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->x, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
+            //rigidbodyA->velocity()->y *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->y, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
+            //rigidbodyA->velocity()->z *= (1.0f - drag) * global_physics_dampen_rate * timedelta*100.0f; // lerp(rigidbodyA->velocity()->z, 0, (1.0f - drag) * global_physics_dampen_rate * timedelta);
 
-        // add gravity to velocity
-        velp->y += timedelta * global_physics_gravity * -global_physics_gravity;//  * ((0.6f + rigidbodyA->velocity()->y) / 1000
+            // add gravity to velocity
+            velp->y += timedelta * global_physics_gravity * -global_physics_gravity;//  * ((0.6f + rigidbodyA->velocity()->y) / 1000
 
-        // dampen velocity
-        float damp = global_physics_dampen_rate * timedelta;
-        if (velp->x < 0.0f) {
-            // add
-            velp->x += damp;
-        } else if (velp->x > 0.0f) {
-            // sub
-            velp->x -= damp;
-        }  
+            // dampen velocity
+            float damp = global_physics_dampen_rate * timedelta;
+            if (velp->x < 0.0f) {
+                // add
+                velp->x += damp;
+            } else if (velp->x > 0.0f) {
+                // sub
+                velp->x -= damp;
+            }  
 
-        if (velp->y < 0.0f) {
-            // add
-            velp->y += damp;
-        } else if (velp->y > 0.0f) {
-            // sub
-            velp->y -= damp;
-        }  
+            if (velp->y < 0.0f) {
+                // add
+                velp->y += damp;
+            } else if (velp->y > 0.0f) {
+                // sub
+                velp->y -= damp;
+            }  
 
-        if (velp->z < 0.0f) {
-            // add
-            velp->z += damp;
-        } else if (velp->z > 0.0f) {
-            // sub
-            velp->z -= damp;
-        }  
-        
+            if (velp->z < 0.0f) {
+                // add
+                velp->z += damp;
+            } else if (velp->z > 0.0f) {
+                // sub
+                velp->z -= damp;
+            }  
+            
 
-        // simple vertical bounds
-        if (velp->y < -1000) 
-            velp->y = -1000;
-        if (velp->y >  1000) 
-            velp->y =  1000;
-        
-        // ground height check
-        if (positionA->y < boxColliderA->scale()->y/2.0f) {
-            positionA->y = boxColliderA->scale()->y/2.0f;
-            velp->y = 0.0f;
-        }   
-    }
+            // simple vertical bounds
+            if (velp->y < -1000) 
+                velp->y = -1000;
+            if (velp->y >  1000) 
+                velp->y =  1000;
+            
+            // ground height check
+            if (positionA->y < boxColliderA->scale()->y/2.0f) {
+                positionA->y = boxColliderA->scale()->y/2.0f;
+                velp->y = 0.0f;
+            }   
+        }
 
 
     }
@@ -403,6 +403,86 @@ void ManageWorld(ECS::World* world) {
 
     ProcessForcesAndAABB(&rpd_box);
 
+}
+
+bool RaycastHitWorld(Ray* ray, ECS::World* world, RayCollision* out_val) {
+   // bool result = false;
+
+    ECS::IEntity* e;
+    ECS::Transform* transform;
+    Physics::BoxCollider* collider;
+    
+    int ecount = world->CurrentEntityCount();
+
+    bool hasTransform = false;
+    bool hasBox = false;
+    bool hasMesh = false;
+
+    RayCollision hit_data;
+    
+    Ray _ray = *ray;
+    //Ray ray = (Ray){
+    //    .position = camera_pos,
+    //    .direction = camera_forward
+    //};
+
+    BoundingBox bb;
+    Vector3* position;
+    Vector3* scale;
+
+    float centerx = 0.0f;
+    float centery = 0.0f;
+    float centerz = 0.0f;
+
+    float hwidth  = 0.0f;
+    float hheight = 0.0f;
+    float hdepth  = 0.0f;
+
+
+    for (int i = 0; i < ecount; i++) {
+        e = world->GetEntity(i);
+
+        hasTransform    = e->HasComponent("transform");
+        hasBox          = e->HasComponent("box-collider");
+
+        if (hasTransform && hasBox) {
+            transform   = ((ECS::Transform*)      e->GetComponent("transform"));
+            collider    = ((Physics::BoxCollider*)e->GetComponent("box-collider"));
+
+            scale = collider->scale(); 
+            position = transform->position(); 
+
+            hwidth  = scale->x / 4.0f;
+            hheight = scale->y / 4.0f;
+            hdepth  = scale->z / 4.0f;
+
+            centerx = collider->center()->x;
+            centery = collider->center()->y;
+            centerz = collider->center()->z;
+
+            bb.min.x = (position->x + centerx) - hwidth;
+            bb.min.y = (position->y + centery) - hheight;
+            bb.min.z = (position->z + centerz) - hdepth;
+
+            bb.max.x = (position->x + centerx) + hwidth;
+            bb.max.y = (position->y + centery) + hheight;
+            bb.max.z = (position->z + centerz) + hdepth;
+
+            hit_data = GetRayCollisionBox(_ray, bb);
+
+            if (hit_data.hit) {
+                *out_val = hit_data;
+                return true;
+            }
+        }
+
+        if (hasTransform && hasMesh) {
+            transform   = ((ECS::Transform*)      e->GetComponent("transform"));
+            // todo:  hit meshes and/or model's meshes
+        }
+    }
+
+    return false;
 }
 
 

@@ -171,6 +171,9 @@ public:
 */
 void ManageWorld(ECS::World* world);
 
+bool RaycastHitWorld(Ray* ray, ECS::World* world, RayCollision* out_val);
+
+
 }}
 
 #endif // !MOD_PHYSICS
